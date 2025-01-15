@@ -11,8 +11,13 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
-import dj_database_url
 import os
+# from dotenv import load_dotenv  # Library to load .env into os.environ
+from urllib.parse import urlparse
+
+
+# load_dotenv() # comment when commiting
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -38,6 +43,9 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "authentication",
+    "cattle",
+    "medicalevents"
 ]
 
 MIDDLEWARE = [
@@ -75,17 +83,28 @@ WSGI_APPLICATION = "cattlehealthtrackerproject.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-DATABASES = {
-  'default': dj_database_url.config(default=os.environ.get('DATABASE_URL'))
+# DATABASES = {
+#   'default': dj_database_url.config(default=os.environ.get('DATABASE_URL'))
   
   
-#   dj_database_url.config(
-#         # Replace this value with your local database's connection string.
-#         default='postgresql://postgres:postgres@localhost:5432/cattlehealthtrackerproject',
-#         conn_max_age=600
-#     )
-}
+# #   dj_database_url.config(
+# #         # Replace this value with your local database's connection string.
+# #         default='postgresql://postgres:postgres@localhost:5432/cattlehealthtrackerproject',
+# #         conn_max_age=600
+# #     )
+# }
+tmpPostgres = urlparse(os.getenv("DATABASE_URL"))
 
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': tmpPostgres.path.replace('/', ''),
+        'USER': tmpPostgres.username,
+        'PASSWORD': tmpPostgres.password,
+        'HOST': tmpPostgres.hostname,
+        'PORT': 5432,
+    }
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
