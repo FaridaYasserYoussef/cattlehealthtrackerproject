@@ -12,7 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 import os
-# from dotenv import load_dotenv  # Library to load .env into os.environ
+from dotenv import load_dotenv  # Library to load .env into os.environ
 from urllib.parse import urlparse
 
 
