@@ -1,6 +1,6 @@
 import pyotp
 from datetime import datetime, timedelta
-from models import UserApp, RoleFeature
+from .models import UserApp, RoleFeature
 def generate_otp():
     totp = pyotp.TOTP(pyotp.random_base32())  # 5 minutes validity
     return totp.now()

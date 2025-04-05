@@ -32,7 +32,7 @@ SECRET_KEY = "django-insecure-#iabycail@*ss3s8!#6es!!lho2bfyw-#_y-&vo^k^+eusw^3j
 DEBUG = False
 
 ALLOWED_HOSTS = [
-
+"due-crista-arabic-historiograhy-bab865db.koyeb.app"
 ]
 
 
