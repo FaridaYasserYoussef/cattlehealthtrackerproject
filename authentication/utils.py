@@ -14,13 +14,13 @@ def get_user_details(user_id):
     user = UserApp.objects.filter(id = user_id).first()
     final_result = {"first_name": user.first_name, 
                     "last_name": user.last_name, 
-                    "mobile_number": user.mobile_number, 
+                    "mobile_number": str(user.mobile_number), 
                     "email" : user.email,
                     "two_fa_enabled": user.two_fa_enabled,
                     "role": user.role.name
                     }
     
-    accesible_features = RoleFeature.objects.filter(role = user.role)
+    accesible_features = RoleFeature.objects.filter(role_id = user.role_id)
     feature_names = [role_feature.feature_id.name for role_feature in accesible_features]
     final_result["features"] = feature_names
     return final_result

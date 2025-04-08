@@ -45,37 +45,40 @@ class CustomTokenRefreshView(TokenRefreshView):
 @csrf_exempt
 def login(request):
     if request.method == "POST":
-        password = request.POST.get("password")
-        email = request.POST.get("email")
+        data = json.loads(request.body)
+        password = data.get("password")
+        print(password)
+        email = data.get("email")
+        print(email)
         user = UserApp.objects.filter(email = email).first()
         if user:
             password_stored = user.password
             ph = PasswordHasher(hash_len=32, salt_len=16)
-            try:
-                authenticate_user = ph.verify(password_stored, password)
-                if authenticate_user:
-                    request.session['email'] = email
-                    request.session['user_id'] = user.id
-                    request.session['passed_step1'] = True
+            authenticate_user = ph.verify(password_stored, password)
+            if authenticate_user:
+                request.session['email'] = email
+                request.session['user_id'] = user.id
+                request.session['passed_step1'] = True
 
-                    if user.two_fa_enabled:
-                        otp = generate_otp()
-                        request.session["otp"] = otp
-                        request.session['otp_expires'] = time.time() + 300 
-                        request.session["otp_count"] = 0 
-                        send_mail(
-                        'Email Verification OTP',
-                        f'Your OTP for email verification is: {otp}',
-                        settings.EMAIL_HOST_USER,
-                        [email],
-                        fail_silently=False,
-                        )
-                        return JsonResponse({"user_authenticated": True})
-                    else:
-                        user_details = get_user_details(user.id)
-                        refresh_token, access_token = get_tokens_for_user(user)
-                        return JsonResponse({"detail": "login successful", "user": user_details, "refresh": refresh_token, "access": access_token}, status=200)
-            except Exception as e:
+                if user.two_fa_enabled:
+                    otp = generate_otp()
+                    request.session["otp"] = otp
+                    request.session['otp_expires'] = time.time() + 300 
+                    request.session["otp_count"] = 0 
+                    send_mail(
+                    'Email Verification OTP',
+                    f'Your OTP for email verification is: {otp}',
+                    settings.EMAIL_HOST_USER,
+                    [email],
+                    fail_silently=False,
+                    )
+                    return JsonResponse({"user_authenticated": True})
+                else:
+                    user_details = get_user_details(user.id)
+                    refresh_token, access_token = get_tokens_for_user(user)
+                    return JsonResponse({"detail": "login successful", "user": user_details, "refresh": refresh_token, "access": access_token}, status=200)
+            # except Exception as e:
+            #     print(str(e))
                 return JsonResponse({"error": "Something went wrong"}, status=500)
 
         return JsonResponse({"user_authenticated": False})
@@ -84,9 +87,10 @@ def login(request):
 @csrf_exempt
 def verify_otp(request):
     if request.method == "POST":
+        data = json.loads(request.body)
         user_id = request.session.get('user_id')
         otp_expiry = request.session.get("otp_expires")
-        user_otp = request.POST.get("otp")
+        user_otp = data.get("otp")
         otp = request.session.get("otp")
 
 
@@ -120,7 +124,6 @@ def verify_otp(request):
 @csrf_exempt
 def toggle_2fa(request):
     if request.method == "POST":
-        # email = request.POST.get("email")
         # user = UserApp.objects.filter(email = email).first()
         auth_header = request.headers.get('Authorization')
         if auth_header and auth_header.startswith('Bearer '):
@@ -179,8 +182,9 @@ def change_password(request):
                     validated_token = AccessToken(token)
                     user_id  = validated_token["user_id"]
                     user = UserApp.objects.get(id = user_id)
-                    new_password = request.POST.get("new_password")
-                    old_password = request.POST.get("old_password")
+                    data = json.loads(request.body)
+                    new_password = data.get("new_password")
+                    old_password = data.get("old_password")
                     ph = PasswordHasher(hash_len=32, salt_len=16)
                     old_hashed_password = ph.hash(password=old_password)
                     if old_hashed_password != user.password:
