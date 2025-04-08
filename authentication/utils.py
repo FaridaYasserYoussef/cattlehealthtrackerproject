@@ -1,6 +1,8 @@
 import pyotp
 from datetime import datetime, timedelta
 from .models import UserApp, RoleFeature
+from rest_framework_simplejwt.tokens import RefreshToken
+
 def generate_otp():
     totp = pyotp.TOTP(pyotp.random_base32())  # 5 minutes validity
     return totp.now()
@@ -23,4 +25,9 @@ def get_user_details(user_id):
     final_result["features"] = feature_names
     return final_result
 
-    
+
+def get_tokens_for_user(user):
+    refresh = RefreshToken.for_user(user)
+    refresh_token = str(refresh)
+    access_token = str(refresh.access_token)
+    return refresh_token, access_token

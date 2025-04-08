@@ -17,15 +17,22 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path, include
-
+# from django.contrib.admin.templates.admin import login
 import authentication.urls
 import cattle
 import authentication
 import cattle.urls
-
+# from django.views.generic import RedirectView
+from authentication.views import CustomTokenRefreshView
+# from rest_framework_simplejwt.views import (
+#     TokenObtainPairView,
+#     TokenRefreshView,
+# )
 urlpatterns = [
+
     path("admin/", admin.site.urls),
     path("cattle/", include("cattle.urls")),
-    path("authentication/", include("authentication.urls")),
+    path("auth/", include("authentication.urls")),
+    path('api/token/refresh/', CustomTokenRefreshView.as_view(), name='token_refresh'),
 
 ]

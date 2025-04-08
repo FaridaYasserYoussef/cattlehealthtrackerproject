@@ -32,7 +32,8 @@ SECRET_KEY = "django-insecure-#iabycail@*ss3s8!#6es!!lho2bfyw-#_y-&vo^k^+eusw^3j
 DEBUG = False
 
 ALLOWED_HOSTS = [
-"due-crista-arabic-historiograhy-bab865db.koyeb.app"
+"due-crista-arabic-historiograhy-bab865db.koyeb.app",
+# "127.0.0.1"
 ]
 
 
@@ -43,6 +44,8 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.getenv("EMAIL")
 EMAIL_HOST_PASSWORD = os.getenv("PASSWORD")
 
+
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -50,7 +53,7 @@ INSTALLED_APPS = [
     "django.contrib.auth",
     'django_otp',
     'django_otp.plugins.otp_totp',
-    'two_factor',
+    # 'two_factor',
     'two_factor.plugins.phonenumber',
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -59,9 +62,16 @@ INSTALLED_APPS = [
     "authentication",
     "cattle",
     "medicalevents",
-    "phonenumber_field"
+    "phonenumber_field",
+    'rest_framework',
+    'rest_framework.authtoken',
+    'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
 
 ]
+
+AUTH_USER_MODEL = 'authentication.UserApp'
+
 
 MIDDLEWARE = [
     'django_otp.middleware.OTPMiddleware',
@@ -151,7 +161,9 @@ TIME_ZONE = "UTC"
 USE_I18N = True
 
 USE_TZ = True
+LOGIN_URL = 'login'
 
+# LOGIN_URL = "/accounts/login/?next=login/"
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
@@ -174,3 +186,13 @@ if not DEBUG:
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ]
+}
+
+
