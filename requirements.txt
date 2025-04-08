@@ -9,6 +9,7 @@ django-otp==1.6.0
 django-phonenumber-field==8.0.0
 django-two-factor-auth==1.17.0
 djangorestframework==3.16.0
+djangorestframework_simplejwt==5.5.0
 gunicorn==23.0.0
 h11==0.14.0
 packaging==24.2
@@ -16,6 +17,7 @@ phonenumbers==9.0.2
 psycopg==3.2.6
 psycopg2==2.9.10
 pycparser==2.22
+PyJWT==2.9.0
 pyotp==2.9.0
 pypng==0.20220715.0
 python-dotenv==1.1.0
