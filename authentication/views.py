@@ -72,16 +72,16 @@ def login(request):
                     [email],
                     fail_silently=False,
                     )
-                    return JsonResponse({"user_authenticated": True})
+                    return JsonResponse({"detail":  "2fa-enabled","user_authenticated": True})
                 else:
                     user_details = get_user_details(user.id)
                     refresh_token, access_token = get_tokens_for_user(user)
                     return JsonResponse({"detail": "login successful", "user": user_details, "refresh": refresh_token, "access": access_token}, status=200)
             # except Exception as e:
             #     print(str(e))
-                return JsonResponse({"error": "Something went wrong"}, status=500)
+                # return JsonResponse({"error": "Something went wrong"}, status=500)
 
-        return JsonResponse({"user_authenticated": False})
+        return JsonResponse({"detail":  "login fail","user_authenticated": False})
     
 
 @csrf_exempt
