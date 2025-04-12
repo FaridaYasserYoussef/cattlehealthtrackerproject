@@ -39,7 +39,7 @@ class CustomTokenRefreshView(TokenRefreshView):
             })
         
         except Exception as e:
-            return Response({"error" : "Invalid refresh token"}, status= status.HTTP_401_UNAUTHORIZED)
+            return Response({"error" : "Invalid refresh token"}, status= status.HTTP_400_BAD_REQUEST)
 
 
 @csrf_exempt
@@ -72,7 +72,7 @@ def login(request):
                     [email],
                     fail_silently=False,
                     )
-                    return JsonResponse({"detail":  "2fa-enabled","user_authenticated": True})
+                    return JsonResponse({"detail":  "2fa-enabled","user_authenticated": True, "email": email})
                 else:
                     user_details = get_user_details(user.id)
                     refresh_token, access_token = get_tokens_for_user(user)
@@ -134,7 +134,7 @@ def toggle_2fa(request):
                 user = UserApp.objects.get(id = user_id)
                 user.two_fa_enabled = False if user.two_fa_enabled == True else True
                 user.save()
-                return JsonResponse({"detail": "2FA Successfully enabled"})
+                return JsonResponse({"detail": "2FA Successfully toggled", "value" : user.two_fa_enabled})
             except TokenError:
                 return JsonResponse({"error": "Invalid or expired token"}, status=401)
         else:
@@ -145,29 +145,23 @@ def toggle_2fa(request):
 @csrf_exempt
 def resend_otp(request):
     if request.method == "POST":
-        auth_header = request.headers.get('Authorization')
-        if auth_header and auth_header.startswith('Bearer '):
-            token = auth_header.split(' ')[1]
-            try:
-                validated_token = AccessToken(token)
-                user_id = validated_token['user_id']
-                user = UserApp.objects.get(id = user_id)
-                email = user.email
-                otp = generate_otp()
-                request.session["otp"] = otp
-                request.session['otp_expires'] = time.time() + 300 
-                request.session["otp_count"] = 0 
-                send_mail(
-                            'Email Verification OTP',
-                            f'Your OTP for email verification is: {otp}',
-                            settings.EMAIL_HOST_USER,
-                            [email],
-                            fail_silently=False,
-                            )
-                return JsonResponse({"detail": "OTP resent"})
-            except TokenError:
-                return JsonResponse({"error": "Invalid or expired token"}, status=401)
-    return JsonResponse({"detail": "failed to resend OTP"}, status = 500)
+        try:
+            data = json.loads(request.body)
+            email = data["email"]
+            otp = generate_otp()
+            request.session["otp"] = otp
+            request.session['otp_expires'] = time.time() + 300 
+            request.session["otp_count"] = 0 
+            send_mail(
+                        'Email Verification OTP',
+                        f'Your OTP for email verification is: {otp}',
+                        settings.EMAIL_HOST_USER,
+                        [email],
+                        fail_silently=False,
+                        )
+            return JsonResponse({"detail": "OTP resent"})
+        except:
+            return JsonResponse({"detail": "failed to resend OTP"}, status = 500)
 
 
 
@@ -188,7 +182,7 @@ def change_password(request):
                     ph = PasswordHasher(hash_len=32, salt_len=16)
                     old_hashed_password = ph.hash(password=old_password)
                     if old_hashed_password != user.password:
-                        return JsonResponse({"detail": "incorrect old password"}, status = 400)
+                        return JsonResponse({"error": "incorrect old password"}, status = 400)
                     new_hashed_password = ph.hash(password=new_password)
                     user.password = new_hashed_password
                     user.save()
