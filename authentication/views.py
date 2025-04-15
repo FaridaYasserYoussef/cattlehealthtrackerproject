@@ -81,7 +81,7 @@ def login(request):
             #     print(str(e))
                 # return JsonResponse({"error": "Something went wrong"}, status=500)
 
-        return JsonResponse({"detail":  "login fail","user_authenticated": False})
+        return JsonResponse({"detail":  "login fail","user_authenticated": False}, status = 400)
     
 
 @csrf_exempt
@@ -116,8 +116,8 @@ def verify_otp(request):
                     request.session.pop("otp_expires", None)
                     request.session.pop("otp_count", None)
                     request.session.pop("user_id", None) 
-                    return JsonResponse({"detail": "incorrect otp, surpassed otp trials"})
-                return JsonResponse({"detail": "incorrect otp"})
+                    return JsonResponse({"detail": "incorrect otp, surpassed otp trials"}, status = 400)
+                return JsonResponse({"detail": "incorrect otp"}, status = 400)
             
 
 
@@ -134,12 +134,14 @@ def toggle_2fa(request):
                 user = UserApp.objects.get(id = user_id)
                 user.two_fa_enabled = False if user.two_fa_enabled == True else True
                 user.save()
-                return JsonResponse({"detail": "2FA Successfully toggled", "value" : user.two_fa_enabled})
+                return JsonResponse({"detail": "2FA Successfully toggled", "value" : user.two_fa_enabled}, status = 200)
             except TokenError:
                 return JsonResponse({"error": "Invalid or expired token"}, status=401)
+            except Exception as e:
+                return JsonResponse({"error": "An unexpected error occurred", "message": str(e)}, status=500)
         else:
             return JsonResponse({"error": "Invalid or expired token"}, status=401)
-    return JsonResponse({"detail": "Failed to enable 2FA"})
+    return JsonResponse({"detail": "post request expected"}, status=405)
 
 
 @csrf_exempt
@@ -159,9 +161,9 @@ def resend_otp(request):
                         [email],
                         fail_silently=False,
                         )
-            return JsonResponse({"detail": "OTP resent"})
+            return JsonResponse({"detail": "OTP resent", "sent": True} ,status = 200)
         except:
-            return JsonResponse({"detail": "failed to resend OTP"}, status = 500)
+            return JsonResponse({"detail": "failed to resend OTP", "sent": False}, status = 500)
 
 
 
