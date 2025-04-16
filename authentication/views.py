@@ -30,7 +30,8 @@ class CustomTokenRefreshView(TokenRefreshView):
         
         try:
             old_refresh = RefreshToken(refresh_token)
-            user = old_refresh.user
+            user_id = old_refresh.get("user_id")
+            user = UserApp.objects.get(id=user_id)
             old_refresh.blacklist()
             new_refresh = RefreshToken.for_user(user)
             new_refresh.set_exp(from_time= None, lifetime= CUSTOM_REFRESH_LIFETIME)
@@ -41,10 +42,9 @@ class CustomTokenRefreshView(TokenRefreshView):
             })
         
         except Exception as e:
-            print("Invalid refresh token")
             traceb = traceback.format_exc()
             print(traceb)
-            return Response({"error" : "Invalid refresh token"}, status= status.HTTP_400_BAD_REQUEST)
+            return Response({"error" : str(e)}, status= status.HTTP_400_BAD_REQUEST)
 
 @csrf_exempt
 def logout(request):
