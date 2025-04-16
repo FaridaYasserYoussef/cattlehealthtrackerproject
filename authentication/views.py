@@ -16,7 +16,7 @@ from datetime import timedelta
 from django.conf import settings
 from rest_framework_simplejwt.tokens import AccessToken
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
-
+import traceback
 
 CUSTOM_REFRESH_LIFETIME = timedelta(days = 30)
 class CustomTokenRefreshView(TokenRefreshView):
@@ -42,6 +42,8 @@ class CustomTokenRefreshView(TokenRefreshView):
         
         except Exception as e:
             print("Invalid refresh token")
+            traceb = traceback.format_exc()
+            print(traceb)
             return Response({"error" : "Invalid refresh token"}, status= status.HTTP_400_BAD_REQUEST)
 
 @csrf_exempt
