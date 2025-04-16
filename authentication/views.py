@@ -60,7 +60,8 @@ def logout(request):
                     return JsonResponse({"detail": "logout Sucessful"}, status = 200)
                 print("user was not found")
                 return JsonResponse({"error": "user was not found"}, status = 500)
-                
+            except TokenError:
+                return JsonResponse({"error": "Invalid or expired token"}, status=401)
             except Exception as e:
                 print(str(e))
                 return JsonResponse({"error": str(e)}, status = 500)
