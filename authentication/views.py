@@ -21,7 +21,8 @@ from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 CUSTOM_REFRESH_LIFETIME = timedelta(days = 30)
 class CustomTokenRefreshView(TokenRefreshView):
     def post(self, request, *args, **kwargs):
-        refresh_token = request.data.get("refresh")
+        data = json.loads(request.body)
+        refresh_token = data.get("refresh")
 
         if not refresh_token:
             return Response({"error":"Refresh token missing"}, status= status.HTTP_400_BAD_REQUEST)
@@ -40,6 +41,26 @@ class CustomTokenRefreshView(TokenRefreshView):
         
         except Exception as e:
             return Response({"error" : "Invalid refresh token"}, status= status.HTTP_400_BAD_REQUEST)
+
+@csrf_exempt
+def logout(request):
+    if request.method == "POST":
+        auth_header = request.headers.get('Authorization')
+        if auth_header and auth_header.startswith('Bearer '):
+            token = auth_header.split(' ')[1]
+            try:
+                validated_token = AccessToken(token)
+                user_id = validated_token['user_id']
+                user = UserApp.objects.get(id = user_id)
+                if user:
+                    data = json.loads(request.body)
+                    refresh_token = data["refresh"]
+                    old_refresh = RefreshToken(refresh_token)
+                    old_refresh.blacklist()
+                    return JsonResponse({"detail": "logout Sucessful"}, status = 200)
+                return JsonResponse({"error": "user was not found"}, status = 500)
+            except Exception as e:
+                return JsonResponse({"error": str(e)}, status = 500)
 
 
 @csrf_exempt
