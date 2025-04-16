@@ -25,6 +25,7 @@ class CustomTokenRefreshView(TokenRefreshView):
         refresh_token = data.get("refresh")
 
         if not refresh_token:
+            print("Refresh token missing")
             return Response({"error":"Refresh token missing"}, status= status.HTTP_400_BAD_REQUEST)
         
         try:
@@ -40,6 +41,7 @@ class CustomTokenRefreshView(TokenRefreshView):
             })
         
         except Exception as e:
+            print("Invalid refresh token")
             return Response({"error" : "Invalid refresh token"}, status= status.HTTP_400_BAD_REQUEST)
 
 @csrf_exempt
