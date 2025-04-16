@@ -58,8 +58,11 @@ def logout(request):
                     old_refresh = RefreshToken(refresh_token)
                     old_refresh.blacklist()
                     return JsonResponse({"detail": "logout Sucessful"}, status = 200)
+                print("user was not found")
                 return JsonResponse({"error": "user was not found"}, status = 500)
+                
             except Exception as e:
+                print(str(e))
                 return JsonResponse({"error": str(e)}, status = 500)
 
 
