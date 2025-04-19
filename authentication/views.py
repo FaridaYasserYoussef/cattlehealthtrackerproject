@@ -17,6 +17,7 @@ from django.conf import settings
 from rest_framework_simplejwt.tokens import AccessToken
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 import traceback
+import argon2
 
 CUSTOM_REFRESH_LIFETIME = timedelta(days = 30)
 class CustomTokenRefreshView(TokenRefreshView):
@@ -40,7 +41,8 @@ class CustomTokenRefreshView(TokenRefreshView):
                 "refresh": str(new_refresh),
                 "access": str(new_refresh.access_token)
             })
-        
+        except TokenError as e:
+            return Response({"error" : "Refresh token expired"}, status= status.HTTP_401_UNAUTHORIZED)
         except Exception as e:
             traceb = traceback.format_exc()
             print(traceb)
@@ -65,7 +67,7 @@ def logout(request):
                 print("user was not found")
                 return JsonResponse({"error": "user was not found"}, status = 500)
             except TokenError:
-                return JsonResponse({"error": "Invalid or expired token"}, status=401)
+                return JsonResponse({"error": "Invalid or expired access token"}, status=401)
             except Exception as e:
                 print(str(e))
                 return JsonResponse({"error": str(e)}, status = 500)
@@ -83,29 +85,33 @@ def login(request):
         if user:
             password_stored = user.password
             ph = PasswordHasher(hash_len=32, salt_len=16)
-            authenticate_user = ph.verify(password_stored, password)
-            if authenticate_user:
-                request.session['email'] = email
-                request.session['user_id'] = user.id
-                request.session['passed_step1'] = True
+            try:
+                authenticate_user = ph.verify(password_stored, password)
+                if authenticate_user:
+                    request.session['email'] = email
+                    request.session['user_id'] = user.id
+                    request.session['passed_step1'] = True
 
-                if user.two_fa_enabled:
-                    otp = generate_otp()
-                    request.session["otp"] = otp
-                    request.session['otp_expires'] = time.time() + 300 
-                    request.session["otp_count"] = 0 
-                    send_mail(
-                    'Email Verification OTP',
-                    f'Your OTP for email verification is: {otp}',
-                    settings.EMAIL_HOST_USER,
-                    [email],
-                    fail_silently=False,
-                    )
-                    return JsonResponse({"detail":  "2fa-enabled","user_authenticated": True, "email": email})
-                else:
-                    user_details = get_user_details(user.id)
-                    refresh_token, access_token = get_tokens_for_user(user)
-                    return JsonResponse({"detail": "login successful", "user": user_details, "refresh": refresh_token, "access": access_token}, status=200)
+                    if user.two_fa_enabled:
+                        otp = generate_otp()
+                        request.session["otp"] = otp
+                        request.session['otp_expires'] = time.time() + 300 
+                        request.session["otp_count"] = 0 
+                        send_mail(
+                        'Email Verification OTP',
+                        f'Your OTP for email verification is: {otp}',
+                        settings.EMAIL_HOST_USER,
+                        [email],
+                        fail_silently=False,
+                        )
+                        return JsonResponse({"detail":  "2fa-enabled","user_authenticated": True, "email": email})
+                    else:
+                        user_details = get_user_details(user.id)
+                        refresh_token, access_token = get_tokens_for_user(user)
+                        return JsonResponse({"detail": "login successful", "user": user_details, "refresh": refresh_token, "access": access_token}, status=200)
+            except argon2.exceptions.VerifyMismatchError:
+                return JsonResponse({"error":  "login fail","user_authenticated": False}, status = 400)
+
             # except Exception as e:
             #     print(str(e))
                 # return JsonResponse({"error": "Something went wrong"}, status=500)
@@ -165,11 +171,11 @@ def toggle_2fa(request):
                 user.save()
                 return JsonResponse({"detail": "2FA Successfully toggled", "value" : user.two_fa_enabled}, status = 200)
             except TokenError:
-                return JsonResponse({"error": "Invalid or expired token"}, status=401)
+                return JsonResponse({"error": "Invalid or expired access token"}, status=401)
             except Exception as e:
                 return JsonResponse({"error": "An unexpected error occurred", "message": str(e)}, status=500)
         else:
-            return JsonResponse({"error": "Invalid or expired token"}, status=401)
+            return JsonResponse({"error": "Authorization header missing"}, status=401)
     return JsonResponse({"detail": "post request expected"}, status=405)
 
 
@@ -211,14 +217,16 @@ def change_password(request):
                     new_password = data.get("new_password")
                     old_password = data.get("old_password")
                     ph = PasswordHasher(hash_len=32, salt_len=16)
-                    old_hashed_password = ph.hash(password=old_password)
-                    if old_hashed_password != user.password:
+                    # old_hashed_password = ph.hash(password=old_password)
+                    try:
+                        ph.verify(user.password, old_password)
+                    except:
                         return JsonResponse({"error": "incorrect old password"}, status = 400)
                     new_hashed_password = ph.hash(password=new_password)
                     user.password = new_hashed_password
                     user.save()
                     return JsonResponse({"detail": "password successfully changed"}, status = 200)
                 except TokenError:
-                    return JsonResponse({"error": "Invalid or expired token"}, status=401)
+                    return JsonResponse({"error": "Invalid or expired access token"}, status=401)
             else:
                 return JsonResponse({"error": "Authorization header missing"}, status=401)
