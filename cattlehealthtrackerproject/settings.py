@@ -14,7 +14,9 @@ from pathlib import Path
 import os
 # from dotenv import load_dotenv  # Library to load .env into os.environ
 from urllib.parse import urlparse
-
+from datetime import timedelta
+import redis
+from django.core.cache import cache
 
 # load_dotenv() # comment when commiting
 
@@ -195,4 +197,20 @@ REST_FRAMEWORK = {
     ]
 }
 
+SIMPLE_JWT = {
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=30),
+}
 
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': os.getenv("REDIS_URL", "redis://127.0.0.1:6379"),
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        }
+    }
+}
+
+SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+SESSION_CACHE_ALIAS = "default"

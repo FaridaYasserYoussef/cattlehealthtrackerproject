@@ -22,6 +22,7 @@ pyotp==2.9.0
 pypng==0.20220715.0
 python-dotenv==1.1.0
 qrcode==7.4.2
+redis==5.2.1
 sqlparse==0.5.3
 typing_extensions==4.13.1
 uvicorn==0.34.0

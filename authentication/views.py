@@ -18,6 +18,7 @@ from rest_framework_simplejwt.tokens import AccessToken
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 import traceback
 import argon2
+from smtplib import SMTPException
 
 CUSTOM_REFRESH_LIFETIME = timedelta(days = 30)
 class CustomTokenRefreshView(TokenRefreshView):
@@ -42,6 +43,7 @@ class CustomTokenRefreshView(TokenRefreshView):
                 "access": str(new_refresh.access_token)
             })
         except TokenError as e:
+            
             return Response({"error" : "Refresh token expired"}, status= status.HTTP_401_UNAUTHORIZED)
         except Exception as e:
             traceb = traceback.format_exc()
@@ -95,16 +97,20 @@ def login(request):
                     if user.two_fa_enabled:
                         otp = generate_otp()
                         request.session["otp"] = otp
-                        request.session['otp_expires'] = time.time() + 300 
-                        request.session["otp_count"] = 0 
-                        send_mail(
-                        'Email Verification OTP',
-                        f'Your OTP for email verification is: {otp}',
-                        settings.EMAIL_HOST_USER,
-                        [email],
-                        fail_silently=False,
-                        )
-                        return JsonResponse({"detail":  "2fa-enabled","user_authenticated": True, "email": email})
+                        try:
+                            send_mail(
+                            'Email Verification OTP',
+                            f'Your OTP for email verification is: {otp}',
+                            settings.EMAIL_HOST_USER,
+                            [email],
+                            fail_silently=False,
+                            )
+                            request.session['otp_expires'] = time.time() + 300 
+                            request.session["otp_count"] = 0 
+                            request.session["otp_resend_cool_down"] = time.time() + 300 
+                            return JsonResponse({"detail":  "2fa-enabled","user_authenticated": True, "email": email, "resend_cooldown":request.session.get("otp_resend_cool_down")})
+                        except SMTPException as e:
+                            return JsonResponse({"error": "Failed to send OTP email", "message": str(e)}, status=500)
                     else:
                         user_details = get_user_details(user.id)
                         refresh_token, access_token = get_tokens_for_user(user)
@@ -127,13 +133,17 @@ def verify_otp(request):
         otp_expiry = request.session.get("otp_expires")
         user_otp = data.get("otp")
         otp = request.session.get("otp")
+        otp_verify_cooldown = request.session.get("otp_verify_cooldown")
 
+  
 
-        if not otp_expiry or time.time() > otp_expiry:
-            new_otp = generate_otp()
-            request.session["otp"] = new_otp
-            request.session["otp_expires"] = time.time() + 300
-            return JsonResponse({"detail": "OTP expired"}, status=403)
+        if time.time() > otp_expiry:
+            # new_otp = generate_otp()
+            # request.session["otp"] = new_otp
+            # request.session["otp_expires"] = time.time() + 300
+            return JsonResponse({"detail": "OTP expired ask for an otp resend"}, status=403)
+        if otp_verify_cooldown and time.time() < otp_verify_cooldown:
+            return JsonResponse({"detail": "OTP cool down did not end"}, status=429)
         else:
             if user_otp == otp:
                 user_details = get_user_details(user_id)
@@ -150,9 +160,11 @@ def verify_otp(request):
                     request.session.pop("otp", None)
                     request.session.pop("otp_expires", None)
                     request.session.pop("otp_count", None)
-                    request.session.pop("user_id", None) 
+                    request.session.pop("user_id", None)
+                    request.session.pop("otp_verify_cooldown", None)
                     return JsonResponse({"detail": "incorrect otp, surpassed otp trials"}, status = 400)
-                return JsonResponse({"detail": "incorrect otp"}, status = 400)
+                request.session["otp_verify_cooldown"] = time.time() + 10
+                return JsonResponse({"detail": "incorrect otp", "otp_verify_cooldown": request.session.get("otp_verify_cooldown")}, status = 400)
             
 
 
@@ -188,15 +200,22 @@ def resend_otp(request):
             otp = generate_otp()
             request.session["otp"] = otp
             request.session['otp_expires'] = time.time() + 300 
-            request.session["otp_count"] = 0 
-            send_mail(
-                        'Email Verification OTP',
-                        f'Your OTP for email verification is: {otp}',
-                        settings.EMAIL_HOST_USER,
-                        [email],
-                        fail_silently=False,
-                        )
-            return JsonResponse({"detail": "OTP resent", "sent": True} ,status = 200)
+            request.session["otp_count"] = 0
+            if time.time() > request.session.get("otp_resend_cool_down"):
+                try:
+                    send_mail(
+                                'Email Verification OTP',
+                                f'Your OTP for email verification is: {otp}',
+                                settings.EMAIL_HOST_USER,
+                                [email],
+                                fail_silently=False,
+                                )
+                    request.session["otp_resend_cool_down"] = time.time() + 10
+                    return JsonResponse({"detail": "OTP resent", "sent": True, "otp_resend_cool_down": request.session["otp_resend_cool_down"]} ,status = 200)
+                except SMTPException as e:
+                    return JsonResponse({"error": "Failed to send OTP email", "message": str(e)}, status=500)
+            else:
+                return JsonResponse({"detail": "resend otp cool down did not pass", "sent": False} ,status = 429)
         except:
             return JsonResponse({"detail": "failed to resend OTP", "sent": False}, status = 500)
 
