@@ -12,13 +12,13 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 import os
-# from dotenv import load_dotenv  # Library to load .env into os.environ
+from dotenv import load_dotenv  # Library to load .env into os.environ
 from urllib.parse import urlparse
 from datetime import timedelta
 import redis
 from django.core.cache import cache
 
-# load_dotenv() # comment when commiting
+load_dotenv() # comment when commiting
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -35,7 +35,7 @@ DEBUG = False
 
 ALLOWED_HOSTS = [
 "due-crista-arabic-historiograhy-bab865db.koyeb.app",
-# "127.0.0.1"
+"127.0.0.1"
 ]
 
 
