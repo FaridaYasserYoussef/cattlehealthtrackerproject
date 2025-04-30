@@ -80,15 +80,17 @@ def login(request):
     if request.method == "POST":
         data = json.loads(request.body)
         password = data.get("password")
-        print(password)
+        # print(password)
         email = data.get("email")
-        print(email)
+        # print(email)
         user = UserApp.objects.filter(email = email).first()
         if user:
+            # print("user found")
             password_stored = user.password
             ph = PasswordHasher(hash_len=32, salt_len=16)
             try:
                 authenticate_user = ph.verify(password_stored, password)
+                # print(authenticate_user)
                 if authenticate_user:
                     request.session['email'] = email
                     request.session['user_id'] = user.id
@@ -112,10 +114,15 @@ def login(request):
                         except SMTPException as e:
                             return JsonResponse({"error": "Failed to send OTP email", "message": str(e)}, status=500)
                     else:
-                        user_details = get_user_details(user.id)
-                        refresh_token, access_token = get_tokens_for_user(user)
-                        return JsonResponse({"detail": "login successful", "user": user_details, "refresh": refresh_token, "access": access_token}, status=200)
+                        try:
+                            user_details = get_user_details(user.id)
+                            # print(user_details)
+                            refresh_token, access_token = get_tokens_for_user(user)
+                            return JsonResponse({"detail": "login successful", "user": user_details, "refresh": refresh_token, "access": access_token}, status=200)
+                        except e:
+                            print(str(e))
             except argon2.exceptions.VerifyMismatchError:
+                # print("user_authenticated")
                 return JsonResponse({"error":  "login fail","user_authenticated": False}, status = 400)
 
             # except Exception as e:

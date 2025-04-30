@@ -20,6 +20,10 @@ from django.core.cache import cache
 
 # load_dotenv() # comment when commiting
 
+# print("About to load .env")
+# load_dotenv()
+# print("REDIS_URL after load:", os.getenv("REDIS_URL"))
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -205,7 +209,7 @@ SIMPLE_JWT = {
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': os.getenv("REDIS_URL", "redis://127.0.0.1:6379"),
+        'LOCATION': os.getenv("REDIS_URL", "rediss://127.0.0.1:6379"),
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
         }

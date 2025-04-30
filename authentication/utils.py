@@ -29,5 +29,7 @@ def get_user_details(user_id):
 def get_tokens_for_user(user):
     refresh = RefreshToken.for_user(user)
     refresh_token = str(refresh)
+    # print(type(refresh_token))
     access_token = str(refresh.access_token)
+    # print(type(access_token))
     return refresh_token, access_token
