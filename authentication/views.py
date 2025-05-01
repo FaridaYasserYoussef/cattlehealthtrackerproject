@@ -111,7 +111,7 @@ def login(request):
                             request.session["otp_count"] = 0 
                             request.session["otp_resend_cool_down"] = time.time() + 300 
                             return JsonResponse({"detail":  "2fa-enabled","user_authenticated": True, "email": email, "resend_cooldown":request.session.get("otp_resend_cool_down")})
-                        except SMTPException as e:
+                        except Exception as e:
                             return JsonResponse({"error": "Failed to send OTP email", "message": str(e)}, status=500)
                     else:
                         try:

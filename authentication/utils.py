@@ -56,7 +56,7 @@ def send_email(emailContent: EmailContent):
         ses = get_ses_client()
         response = ses.send_email(
             Source = settings.EMAIL_HOST_USER,
-            Destination={'ToAddresses': emailContent.emailAddress},
+            Destination={'ToAddresses': [emailContent.emailAddress]},
             Message={
             'Subject': {'Data': emailContent.subject},
             'Body': {'Text': {'Data': emailContent.message}},
