@@ -15,7 +15,7 @@ import os
 # from dotenv import load_dotenv  # Library to load .env into os.environ
 from urllib.parse import urlparse
 from datetime import timedelta
-import redis
+# import redis
 from django.core.cache import cache
 
 # load_dotenv() # comment when commiting
@@ -49,6 +49,9 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.getenv("EMAIL")
 EMAIL_HOST_PASSWORD = os.getenv("PASSWORD")
+AWS_ACCESS_KEY = os.getenv('AWS_ACCESS_KEY')
+AWS_SECRET_KEY = os.getenv('AWS_SECRET_KEY')
+AWS_REGION = os.getenv('AWS_REGION')
 
 
 

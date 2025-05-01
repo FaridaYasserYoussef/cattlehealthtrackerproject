@@ -5,7 +5,6 @@ from django.http import JsonResponse, HttpResponse
 from argon2 import PasswordHasher
 from .models import UserApp
 from .utils import *
-from django.core.mail import send_mail
 from django.conf import settings
 import time
 from rest_framework_simplejwt.views import TokenRefreshView
@@ -100,13 +99,14 @@ def login(request):
                         otp = generate_otp()
                         request.session["otp"] = otp
                         try:
-                            send_mail(
-                            'Email Verification OTP',
-                            f'Your OTP for email verification is: {otp}',
-                            settings.EMAIL_HOST_USER,
-                            [email],
-                            fail_silently=False,
-                            )
+                            send_email(EmailContent(email, f'Your OTP is: {otp}', "OTP"))
+                            # send_mail(
+                            # 'Email Verification OTP',
+                            # f'Your OTP for email verification is: {otp}',
+                            # settings.EMAIL_HOST_USER,
+                            # [email],
+                            # fail_silently=False,
+                            # )
                             request.session['otp_expires'] = time.time() + 300 
                             request.session["otp_count"] = 0 
                             request.session["otp_resend_cool_down"] = time.time() + 300 
