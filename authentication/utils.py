@@ -37,10 +37,6 @@ def get_tokens_for_user(user):
 
 
 class EmailContent:
-    emailAddress
-    message
-    subject
-
     def __init__(self, emailAddress, message, subject):
         self.emailAddress = emailAddress
         self.message = message
