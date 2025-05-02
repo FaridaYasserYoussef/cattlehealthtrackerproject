@@ -210,16 +210,17 @@ def resend_otp(request):
             request.session["otp_count"] = 0
             if time.time() > request.session.get("otp_resend_cool_down"):
                 try:
-                    send_mail(
-                                'Email Verification OTP',
-                                f'Your OTP for email verification is: {otp}',
-                                settings.EMAIL_HOST_USER,
-                                [email],
-                                fail_silently=False,
-                                )
+                    send_email(EmailContent(email, f'Your OTP is: {otp}', "OTP"))
+                    # send_mail(
+                    #             'Email Verification OTP',
+                    #             f'Your OTP for email verification is: {otp}',
+                    #             settings.EMAIL_HOST_USER,
+                    #             [email],
+                    #             fail_silently=False,
+                    #             )
                     request.session["otp_resend_cool_down"] = time.time() + 10
                     return JsonResponse({"detail": "OTP resent", "sent": True, "otp_resend_cool_down": request.session["otp_resend_cool_down"]} ,status = 200)
-                except SMTPException as e:
+                except Exception as e:
                     return JsonResponse({"error": "Failed to send OTP email", "message": str(e)}, status=500)
             else:
                 return JsonResponse({"detail": "resend otp cool down did not pass", "sent": False} ,status = 429)
