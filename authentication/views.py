@@ -143,7 +143,8 @@ def verify_otp(request):
         otp_verify_cooldown = request.session.get("otp_verify_cooldown")
 
   
-
+        if not otp_expiry:
+            return JsonResponse({"detail": "OTP not set ask for an otp resend"}, status=403)
         if time.time() > otp_expiry:
             # new_otp = generate_otp()
             # request.session["otp"] = new_otp
