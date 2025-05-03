@@ -144,13 +144,16 @@ def verify_otp(request):
 
   
         if not otp_expiry:
+            print("OTP not set ask for an otp resend")
             return JsonResponse({"detail": "OTP not set ask for an otp resend"}, status=403)
         if time.time() > otp_expiry:
             # new_otp = generate_otp()
             # request.session["otp"] = new_otp
             # request.session["otp_expires"] = time.time() + 300
+            print("OTP expired ask for an otp resend")
             return JsonResponse({"detail": "OTP expired ask for an otp resend"}, status=403)
         if otp_verify_cooldown and time.time() < otp_verify_cooldown:
+            print("OTP cool down did not end")
             return JsonResponse({"detail": "OTP cool down did not end"}, status=429)
         else:
             if user_otp == otp:
@@ -160,6 +163,7 @@ def verify_otp(request):
                 request.session.pop("otp_count", None)
                 user = UserApp.objects.get(id = user_id)
                 refresh_token, access_token = get_tokens_for_user(user)
+                print("OTP passed")
                 return JsonResponse({"detail": "OTP passed", "user": user_details, "refresh": refresh_token, "access": access_token}, status=200)
             else:
                 request.session["otp_count"] = request.session["otp_count"] + 1
@@ -170,8 +174,10 @@ def verify_otp(request):
                     request.session.pop("otp_count", None)
                     request.session.pop("user_id", None)
                     request.session.pop("otp_verify_cooldown", None)
+                    print("incorrect otp, surpassed otp trials")
                     return JsonResponse({"detail": "incorrect otp, surpassed otp trials"}, status = 400)
                 request.session["otp_verify_cooldown"] = time.time() + 10
+                print("incorrect otp")
                 return JsonResponse({"detail": "incorrect otp", "otp_verify_cooldown": request.session.get("otp_verify_cooldown")}, status = 400)
             
 
