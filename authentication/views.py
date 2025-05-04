@@ -17,7 +17,7 @@ from rest_framework_simplejwt.tokens import AccessToken
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 import traceback
 import argon2
-from smtplib import SMTPException
+from django.core.cache import cache
 
 CUSTOM_REFRESH_LIFETIME = timedelta(days = 30)
 class CustomTokenRefreshView(TokenRefreshView):
@@ -91,13 +91,14 @@ def login(request):
                 authenticate_user = ph.verify(password_stored, password)
                 # print(authenticate_user)
                 if authenticate_user:
-                    request.session['email'] = email
-                    request.session['user_id'] = user.id
-                    request.session['passed_step1'] = True
+                    # request.session['email'] = email
+                    # request.session['user_id'] = user.id
+                    # request.session['passed_step1'] = True
 
                     if user.two_fa_enabled:
                         otp = generate_otp()
-                        request.session["otp"] = otp
+                        cache.set(f"otp:{email}", otp, timeout=300)
+                        # request.session["otp"] = otp
                         try:
                             send_email(EmailContent(email, f'Your OTP is: {otp}', "OTP"))
                             # send_mail(
@@ -107,10 +108,13 @@ def login(request):
                             # [email],
                             # fail_silently=False,
                             # )
-                            request.session['otp_expires'] = time.time() + 300 
-                            request.session["otp_count"] = 0 
-                            request.session["otp_resend_cool_down"] = time.time() + 300 
-                            return JsonResponse({"detail":  "2fa-enabled","user_authenticated": True, "email": email, "resend_cooldown":request.session.get("otp_resend_cool_down")})
+                            # request.session['otp_expires'] = time.time() + 300
+                            cache.set(f"otp_expires:{email}", time.time() + 300, timeout=300)
+                            cache.set(f"otp_attempts:{email}", 0, timeout=300) 
+                            # request.session["otp_count"] = 0 
+                            # request.session["otp_resend_cool_down"] = time.time() + 300
+                            cache.set(f"otp_resend_cool_down:{email}", time.time() + 10) 
+                            return JsonResponse({"detail":  "2fa-enabled","user_authenticated": True, "email": email, "resend_cooldown":cache.get(f"otp_resend_cool_down:{email}")})
                         except Exception as e:
                             return JsonResponse({"error": "Failed to send OTP email", "message": str(e)}, status=500)
                     else:
@@ -136,11 +140,15 @@ def login(request):
 def verify_otp(request):
     if request.method == "POST":
         data = json.loads(request.body)
-        user_id = request.session.get('user_id')
-        otp_expiry = request.session.get("otp_expires")
+        # user_id = request.session.get('user_id')
+        # otp_expiry = request.session.get("otp_expires")
+        email = data.get("email")
+        otp_expiry = cache.get(f"otp_expires:{email}")
         user_otp = data.get("otp")
-        otp = request.session.get("otp")
-        otp_verify_cooldown = request.session.get("otp_verify_cooldown")
+        # otp = request.session.get("otp")
+        otp = cache.get(f"otp:{email}")
+        # otp_verify_cooldown = request.session.get("otp_verify_cooldown")
+        otp_verify_cooldown = cache.get(f"otp_verify_cooldown:{email}")
 
   
         if not otp_expiry:
@@ -157,28 +165,39 @@ def verify_otp(request):
             return JsonResponse({"detail": "OTP cool down did not end"}, status=429)
         else:
             if user_otp == otp:
+                user = UserApp.objects.filter(email = email).first()
+                user_id = user.pk
                 user_details = get_user_details(user_id)
-                request.session.pop("otp", None)
-                request.session.pop("otp_expires", None)
-                request.session.pop("otp_count", None)
-                user = UserApp.objects.get(id = user_id)
+                # request.session.pop("otp", None)
+                cache.delete(f"otp:{email}")
+                # request.session.pop("otp_expires", None)
+                cache.delete(f"otp_expires:{email}")
+                # request.session.pop("otp_count", None)
+                cache.delete(f"otp_attempts:{email}")
                 refresh_token, access_token = get_tokens_for_user(user)
                 print("OTP passed")
                 return JsonResponse({"detail": "OTP passed", "user": user_details, "refresh": refresh_token, "access": access_token}, status=200)
             else:
-                request.session["otp_count"] = request.session["otp_count"] + 1
-                otp_count = request.session["otp_count"]
-                if otp_count > 3:
-                    request.session.pop("otp", None)
-                    request.session.pop("otp_expires", None)
-                    request.session.pop("otp_count", None)
-                    request.session.pop("user_id", None)
-                    request.session.pop("otp_verify_cooldown", None)
+                # request.session["otp_count"] = request.session["otp_count"] + 1
+                # otp_count = request.session["otp_count"]
+                attempts = cache.get(f"otp_attempts:{email}", 0)
+                if attempts > 3:
+                    # request.session.pop("otp", None)
+                    cache.delete(f"otp:{email}")
+                    # request.session.pop("otp_expires", None)
+                    cache.delete(f"otp_expires:{email}")
+                    # request.session.pop("otp_count", None)
+                    cache.delete(f"otp_attempts:{email}")
+                    # request.session.pop("user_id", None)
+                    # request.session.pop("otp_verify_cooldown", None)
+                    cache.delete(f"otp_verify_cooldown:{email}")
                     print("incorrect otp, surpassed otp trials")
                     return JsonResponse({"detail": "incorrect otp, surpassed otp trials"}, status = 400)
-                request.session["otp_verify_cooldown"] = time.time() + 10
+                cache.set(f"otp_attempts:{email}", attempts + 1, timeout= 300)
+                # request.session["otp_verify_cooldown"] = time.time() + 10
+                cache.set(f"otp_verify_cooldown:{email}", time.time() +10)
                 print("incorrect otp")
-                return JsonResponse({"detail": "incorrect otp", "otp_verify_cooldown": request.session.get("otp_verify_cooldown")}, status = 400)
+                return JsonResponse({"detail": "incorrect otp", "otp_verify_cooldown": cache.get(f"otp_verify_cooldown:{email}")}, status = 400)
             
 
 
@@ -212,10 +231,14 @@ def resend_otp(request):
             data = json.loads(request.body)
             email = data["email"]
             otp = generate_otp()
-            request.session["otp"] = otp
-            request.session['otp_expires'] = time.time() + 300 
-            request.session["otp_count"] = 0
-            if time.time() > request.session.get("otp_resend_cool_down"):
+            # request.session["otp"] = otp
+            cache.set(f"otp:{email}", otp, timeout= 300)
+            # request.session['otp_expires'] = time.time() + 300 
+            cache.set(f"otp_expires:{email}", time.time() + 300, timeout= 300)
+            # request.session["otp_count"] = 0
+            cache.set(f"otp_attempts:{email}", 0, timeout=300)
+            cool_down = cache.get(f"otp_resend_cool_down:{email}")
+            if time.time() > cool_down:
                 try:
                     send_email(EmailContent(email, f'Your OTP is: {otp}', "OTP"))
                     # send_mail(
@@ -225,8 +248,9 @@ def resend_otp(request):
                     #             [email],
                     #             fail_silently=False,
                     #             )
-                    request.session["otp_resend_cool_down"] = time.time() + 10
-                    return JsonResponse({"detail": "OTP resent", "sent": True, "otp_resend_cool_down": request.session["otp_resend_cool_down"]} ,status = 200)
+                    # request.session["otp_resend_cool_down"] = time.time() + 10
+                    cache.set(f"otp_resend_cool_down:{email}", time.time() + 10)
+                    return JsonResponse({"detail": "OTP resent", "sent": True, "otp_resend_cool_down": cache.get(f"otp_resend_cool_down:{email}")} ,status = 200)
                 except Exception as e:
                     return JsonResponse({"error": "Failed to send OTP email", "message": str(e)}, status=500)
             else:
