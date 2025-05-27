@@ -92,9 +92,7 @@ def login(request):
                 authenticate_user = ph.verify(password_stored, password)
                 # print(authenticate_user)
                 if authenticate_user:
-                    # request.session['email'] = email
-                    # request.session['user_id'] = user.id
-                    # request.session['passed_step1'] = True
+
 
                     if user.two_fa_enabled:
                         otp = generate_otp()
@@ -102,14 +100,6 @@ def login(request):
                         # request.session["otp"] = otp
                         try:
                             send_email(EmailContent(email, f'Your OTP is: {otp}', "OTP"))
-                            # send_mail(
-                            # 'Email Verification OTP',
-                            # f'Your OTP for email verification is: {otp}',
-                            # settings.EMAIL_HOST_USER,
-                            # [email],
-                            # fail_silently=False,
-                            # )
-                            # request.session['otp_expires'] = time.time() + 300
                             cache.set(f"otp_expires:{email}", time.time() + 300, timeout=300)
                             cache.set(f"otp_attempts:{email}", 0, timeout=300) 
                             # request.session["otp_count"] = 0 
@@ -156,9 +146,6 @@ def verify_otp(request):
             print("OTP not set ask for an otp resend")
             return JsonResponse({"detail": "OTP not set ask for an otp resend"}, status=403)
         if time.time() > otp_expiry:
-            # new_otp = generate_otp()
-            # request.session["otp"] = new_otp
-            # request.session["otp_expires"] = time.time() + 300
             print("OTP expired ask for an otp resend")
             return JsonResponse({"detail": "OTP expired ask for an otp resend"}, status=403)
         if otp_verify_cooldown and time.time() < otp_verify_cooldown:
