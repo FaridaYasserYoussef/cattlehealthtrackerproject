@@ -146,6 +146,7 @@ def verify_otp(request):
             print("OTP not set ask for an otp resend")
             return JsonResponse({"detail": "OTP not set ask for an otp resend"}, status=403)
         if time.time() > otp_expiry:
+
             print("OTP expired ask for an otp resend")
             return JsonResponse({"detail": "OTP expired ask for an otp resend"}, status=403)
         if otp_verify_cooldown and time.time() < otp_verify_cooldown:
@@ -162,6 +163,8 @@ def verify_otp(request):
                 cache.delete(f"otp_expires:{email}")
                 # request.session.pop("otp_count", None)
                 cache.delete(f"otp_attempts:{email}")
+                cache.delete(f"otp_resend_cool_down:{email}")
+                cache.delete(f"otp_verify_cooldown:{email}")
                 refresh_token, access_token = get_tokens_for_user(user)
                 print("OTP passed")
                 return JsonResponse({"detail": "OTP passed", "user": user_details, "refresh": refresh_token, "access": access_token}, status=200)
@@ -179,6 +182,7 @@ def verify_otp(request):
                     # request.session.pop("user_id", None)
                     # request.session.pop("otp_verify_cooldown", None)
                     cache.delete(f"otp_verify_cooldown:{email}")
+                    cache.delete(f"otp_resend_cool_down:{email}")
                     print("incorrect otp, surpassed otp trials")
                     return JsonResponse({"detail": "incorrect otp, surpassed otp trials"}, status = 400)
                 cache.set(f"otp_attempts:{email}", attempts + 1, timeout= 300)

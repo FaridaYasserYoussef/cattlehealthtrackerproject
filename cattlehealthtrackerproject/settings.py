@@ -35,7 +35,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = "django-insecure-#iabycail@*ss3s8!#6es!!lho2bfyw-#_y-&vo^k^+eusw^3j"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = [
 "due-crista-arabic-historiograhy-bab865db.koyeb.app",
@@ -215,7 +215,8 @@ CACHES = {
         'LOCATION': os.getenv("REDIS_URL", "rediss://127.0.0.1:6379"),
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-        }
+        },
+        'TIMEOUT': None, 
     }
 }
 
