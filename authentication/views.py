@@ -19,6 +19,11 @@ from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 import traceback
 import argon2
 from django.core.cache import cache
+from django.contrib.auth.tokens import default_token_generator
+from django.urls import reverse
+from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes
+
 
 CUSTOM_REFRESH_LIFETIME = timedelta(days = 30)
 class CustomTokenRefreshView(TokenRefreshView):
@@ -277,3 +282,49 @@ def change_password(request):
                     return JsonResponse({"error": "Invalid or expired access token"}, status=401)
             else:
                 return JsonResponse({"error": "Authorization header missing"}, status=401)
+
+
+@csrf_exempt
+def send_password_reset_email(request):
+    if request.method == "POST":
+        data = json.loads(request.body)
+        email =  data.get("email")
+        user = UserApp.objects.filter(email = email).first()
+        if user:
+            token = default_token_generator.make_token(user)
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            reset_link = f"https://resetpasswordfarmbuild.vercel.app?uid={uid}&token={token}"
+            try:
+                send_email(EmailContent(email, f'Reset link: {reset_link}', "Password Reset"))
+                return JsonResponse({"detail": "reset link sent successfully"}, status = 200)
+            except Exception as e:
+                print("failed to send email")
+                return JsonResponse({"error": "failed to send email"}, status = 400)
+        else:
+            return JsonResponse({"error": "user not found"}, status = 400)
+        # cache.set(f"otp:{email}", otp, timeout= 300)
+
+
+
+
+@csrf_exempt
+def reset_password_from_link(request):
+    if request.method == "POST":
+        data = json.loads(request.body)
+        uidb64 = data.get('uid')
+        token = data.get('token')
+        new_password = data.get('new_password')
+        try:
+            uid = urlsafe_base64_encode(uidb64).decode()
+            user = UserApp.objects.get(id = uid)
+            if not user:
+                return JsonResponse({"error": "user not found"}, status = 400)
+        except (TypeError, ValueError, OverflowError):
+            return JsonResponse({'error': 'Invalid token'}, status=400)
+        
+        if default_token_generator.check_token(user, token):
+            user.set_password(new_password)
+            user.save()
+            return JsonResponse({"detail": "Password reset successful"}, status = 200)
+        else:
+            return JsonResponse({"error": "Invalid or expired token"}, status = 400)
